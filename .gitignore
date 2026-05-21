@@ -1,0 +1,33 @@
+# OS
+.DS_Store
+
+# Xcode
+build/
+DerivedData/
+*.xcuserstate
+*.xcworkspace/xcuserdata/
+*.pbxuser
+*.mode1v3
+*.mode2v3
+*.perspectivev3
+!default.pbxuser
+!default.mode1v3
+!default.mode2v3
+!default.perspectivev3
+xcuserdata/
+
+# Swift Package Manager
+.build/
+Packages/
+Package.resolved
+
+# Secrets
+.env
+.env.local
+
+# Misc
+*.swp
+*~
+
+# Setup scripts (not part of the app)
+generate_xcodeproj.py
