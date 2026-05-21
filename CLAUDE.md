@@ -157,7 +157,7 @@ HIPAAspeak/
     - Day Session (consumable): $9.99 — 30-minute time bank, valid for current calendar day,
       resets at midnight local time. Multiple HIPAA sessions allowed within the day.
       Unused minutes expire at midnight, no rollover.
-    - Monthly subscription: $18.99/month auto-renewable.
+    - Monthly subscription: $19.99/month auto-renewable.
       Annual option: $181.99/year (~20% discount).
 - Session bank state (date + seconds remaining) stored in Keychain — billing state, not PHI.
 - Monthly subscribers bypass the bank entirely — unlimited sessions.

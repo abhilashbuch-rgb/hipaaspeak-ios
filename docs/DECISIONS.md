@@ -54,7 +54,7 @@ Decision: Two products only.
      (resets at midnight local time). Time is deducted in real time during active sessions.
      Unused minutes expire at midnight — no rollover. Multiple HIPAA sessions allowed within
      the purchased day (the HIPAA 30-min ceiling and the billing bank are independent).
-  2. Monthly — $18.99/month auto-renewable subscription. Unlimited sessions.
+  2. Monthly — $19.99/month auto-renewable subscription. Unlimited sessions.
      Annual billing option at $181.99/year (~20% discount, ~$15.17/month).
 Rationale: The Day Session maps naturally to the existing 30-minute HIPAA session ceiling
 architecture. A clinician who uses 8 minutes in the morning can return later the same day
