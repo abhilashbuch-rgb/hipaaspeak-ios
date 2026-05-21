@@ -57,9 +57,12 @@ final class BillingService {
 
     // Keychain keys — billing state only, never PHI. ARCHITECTURE.md §1.
     private enum BankKey {
-        static let date    = "bank_date"
-        static let seconds = "bank_seconds"
+        static let purchaseDate = "bank_purchase_date"   // Unix timestamp of purchase (Double as String)
+        static let seconds      = "bank_seconds"         // Remaining seconds (Int as String)
     }
+
+    /// 7 days in seconds — how long a day session bank stays valid after purchase.
+    private let bankValidityWindow: TimeInterval = 7 * 24 * 3600
 
     // MARK: - Init / deinit
 
@@ -186,12 +189,12 @@ final class BillingService {
         switch transaction.productType {
         case .consumable:
             guard transaction.productID == ProductID.daySession else { return }
-            // Credit 30 minutes for today
-            let today = todayString()
-            KeychainHelper.save(key: BankKey.date, value: today)
+            // Credit 30 minutes valid for 7 days from purchase. ADR-007.
+            let purchaseTimestamp = "\(Date().timeIntervalSince1970)"
+            KeychainHelper.save(key: BankKey.purchaseDate, value: purchaseTimestamp)
             KeychainHelper.save(key: BankKey.seconds, value: "1800")
             daySessionSecondsRemaining = 1800
-            logger.info("Day session purchased. 1800s credited for \(today).")
+            logger.info("Day session purchased. 1800s credited, valid 7 days.")
 
         case .autoRenewable:
             await checkEntitlements()
@@ -202,10 +205,10 @@ final class BillingService {
     }
 
     private func loadBankFromKeychain() {
-        let today = todayString()
         guard
-            let savedDate = KeychainHelper.load(key: BankKey.date),
-            savedDate == today,
+            let timestampStr = KeychainHelper.load(key: BankKey.purchaseDate),
+            let purchaseTimestamp = Double(timestampStr),
+            Date().timeIntervalSince1970 - purchaseTimestamp < bankValidityWindow,
             let secondsStr = KeychainHelper.load(key: BankKey.seconds),
             let seconds = Int(secondsStr),
             seconds > 0
@@ -218,15 +221,9 @@ final class BillingService {
     }
 
     private func saveBankToKeychain() {
-        KeychainHelper.save(key: BankKey.date, value: todayString())
+        // Only update remaining seconds — purchase date is set once at purchase time
+        // and must not be overwritten or the 7-day window resets on every save.
         KeychainHelper.save(key: BankKey.seconds, value: "\(daySessionSecondsRemaining)")
-    }
-
-    private func todayString() -> String {
-        let f = DateFormatter()
-        f.dateFormat = "yyyy-MM-dd"
-        f.timeZone = .current
-        return f.string(from: Date())
     }
 
     /// Verifies a StoreKit transaction is genuinely from Apple.

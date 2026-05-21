@@ -51,8 +51,8 @@ Context: Need a pricing model that serves two distinct user types: high-frequenc
 occasional encounters).
 Decision: Two products only.
   1. Day Session — $9.99. Buys a 30-minute time bank valid for the current calendar day
-     (resets at midnight local time). Time is deducted in real time during active sessions.
-     Unused minutes expire at midnight — no rollover. Multiple HIPAA sessions allowed within
+     (valid for 7 days from purchase). Time is deducted in real time during active sessions.
+     Unused minutes expire 7 days after purchase — no rollover. Multiple HIPAA sessions allowed within
      the purchased day (the HIPAA 30-min ceiling and the billing bank are independent).
   2. Monthly — $19.99/month auto-renewable subscription. Unlimited sessions.
      Annual billing option at $181.99/year (~20% discount, ~$15.17/month).
@@ -63,5 +63,5 @@ Implementation: Session bank state (date + seconds remaining) stored in Keychain
 This is billing state, not PHI — persistent storage is permitted per ARCHITECTURE.md §1.
 Monthly subscribers bypass the bank entirely.
 Consequences: Need to track elapsed time during active sessions and deduct from Keychain
-bank. Must handle midnight rollover. No PAYG per-minute billing — simplifies StoreKit
+bank. No midnight rollover edge case. No PAYG per-minute billing — simplifies StoreKit
 implementation to one consumable product + one subscription group.

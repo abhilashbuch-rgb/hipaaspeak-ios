@@ -93,7 +93,7 @@ private struct ProductCard: View {
     private var subtitle: String {
         switch product.id {
         case BillingService.ProductID.daySession:
-            return "30-minute time bank, valid until midnight. Use across multiple encounters."
+            return "30-minute time bank, valid for 7 days. Use across multiple encounters — pick up right where you left off."
         case BillingService.ProductID.monthly:
             return "Unlimited sessions every day. Cancel any time."
         case BillingService.ProductID.annual:

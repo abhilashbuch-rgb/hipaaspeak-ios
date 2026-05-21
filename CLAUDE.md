@@ -155,8 +155,8 @@ HIPAAspeak/
 - StoreKit 2 integration (no Stripe for in-app purchases — App Store handles payment)
 - Two products:
     - Day Session (consumable): $9.99 — 30-minute time bank, valid for current calendar day,
-      resets at midnight local time. Multiple HIPAA sessions allowed within the day.
-      Unused minutes expire at midnight, no rollover.
+      resets 7 days after purchase. Multiple sessions allowed within that window.
+      Unused minutes expire 7 days after purchase, no rollover.
     - Monthly subscription: $19.99/month auto-renewable.
       Annual option: $181.99/year (~20% discount).
 - Session bank state (date + seconds remaining) stored in Keychain — billing state, not PHI.
