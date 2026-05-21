@@ -21,6 +21,15 @@ final class SessionManager {
     private(set) var isSessionActive = false
     private(set) var isScreenRecording = false
 
+    /// Set to true when the 30-minute hard ceiling fires.
+    /// RootView observes this and presents the Face ID re-auth gate.
+    /// ARCHITECTURE.md §5 — re-authentication required after ceiling.
+    private(set) var pendingReauth = false
+
+    func clearPendingReauth() {
+        pendingReauth = false
+    }
+
     // MARK: - Timers
 
     private var hardCeilingTimer: Timer?
@@ -90,6 +99,12 @@ final class SessionManager {
         hardCeilingTimer = nil
         idleTimer?.invalidate()
         idleTimer = nil
+
+        // Hard ceiling requires Face ID before the next session can start.
+        // RootView presents the ReauthGateView when this is true.
+        if reason == .hardCeiling {
+            pendingReauth = true
+        }
 
         // Log reason only — never content
         logger.info("Session wiped. Reason=\(reason.rawValue)")

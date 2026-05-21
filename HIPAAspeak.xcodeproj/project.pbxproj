@@ -39,6 +39,7 @@
 		AA0000000000000000000059 /* CredentialVerificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000003B /* CredentialVerificationTests.swift */; };
 		AA0000000000000000000067 /* BillingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000063 /* BillingService.swift */; };
 		AA0000000000000000000068 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000064 /* PaywallView.swift */; };
+		AA000000000000000000006B /* ReauthGateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000006C /* ReauthGateView.swift */; };
 		AA000000000000000000006A /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000069 /* Assets.xcassets */; };
 /* End PBXBuildFile section */
 
@@ -78,6 +79,7 @@
 		AA0000000000000000000041 /* CryptoKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CryptoKit.framework; path = System/Library/Frameworks/CryptoKit.framework; sourceTree = SDKROOT; };
 		AA0000000000000000000042 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
 		AA0000000000000000000063 /* BillingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillingService.swift; sourceTree = "<group>"; };
+		AA000000000000000000006C /* ReauthGateView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ReauthGateView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000064 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 		AA0000000000000000000069 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 /* End PBXFileReference section */
@@ -151,6 +153,7 @@
 		AA0000000000000000000006 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				AA000000000000000000006D /* Auth */,
 				AA0000000000000000000065 /* Billing */,
 				AA0000000000000000000007 /* Credentials */,
 				AA0000000000000000000008 /* Interpreter */,
@@ -158,6 +161,14 @@
 				AA000000000000000000000A /* Settings */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		AA000000000000000000006D /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				AA000000000000000000006C /* ReauthGateView.swift */,
+			);
+			path = Auth;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000065 /* Billing */ = {
@@ -375,6 +386,7 @@
 				AA0000000000000000000056 /* GlassButton.swift in Sources */,
 				AA0000000000000000000067 /* BillingService.swift in Sources */,
 				AA0000000000000000000068 /* PaywallView.swift in Sources */,
+				AA000000000000000000006B /* ReauthGateView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
