@@ -37,6 +37,8 @@
 		AA0000000000000000000057 /* SessionWipeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000039 /* SessionWipeTests.swift */; };
 		AA0000000000000000000058 /* NoDiskWritesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000003A /* NoDiskWritesTests.swift */; };
 		AA0000000000000000000059 /* CredentialVerificationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA000000000000000000003B /* CredentialVerificationTests.swift */; };
+		AA0000000000000000000067 /* BillingService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000063 /* BillingService.swift */; };
+		AA0000000000000000000068 /* PaywallView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0000000000000000000064 /* PaywallView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -74,6 +76,8 @@
 		AA0000000000000000000040 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		AA0000000000000000000041 /* CryptoKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CryptoKit.framework; path = System/Library/Frameworks/CryptoKit.framework; sourceTree = SDKROOT; };
 		AA0000000000000000000042 /* LocalAuthentication.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = LocalAuthentication.framework; path = System/Library/Frameworks/LocalAuthentication.framework; sourceTree = SDKROOT; };
+		AA0000000000000000000063 /* BillingService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BillingService.swift; sourceTree = "<group>"; };
+		AA0000000000000000000064 /* PaywallView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PaywallView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -145,12 +149,21 @@
 		AA0000000000000000000006 /* Features */ = {
 			isa = PBXGroup;
 			children = (
+				AA0000000000000000000065 /* Billing */,
 				AA0000000000000000000007 /* Credentials */,
 				AA0000000000000000000008 /* Interpreter */,
 				AA0000000000000000000009 /* Onboarding */,
 				AA000000000000000000000A /* Settings */,
 			);
 			path = Features;
+			sourceTree = "<group>";
+		};
+		AA0000000000000000000065 /* Billing */ = {
+			isa = PBXGroup;
+			children = (
+				AA0000000000000000000064 /* PaywallView.swift */,
+			);
+			path = Billing;
 			sourceTree = "<group>";
 		};
 		AA0000000000000000000007 /* Credentials */ = {
@@ -201,6 +214,7 @@
 			isa = PBXGroup;
 			children = (
 				AA0000000000000000000031 /* AuthManager.swift */,
+				AA0000000000000000000063 /* BillingService.swift */,
 				AA0000000000000000000032 /* CredentialService.swift */,
 				AA0000000000000000000033 /* SessionManager.swift */,
 				AA0000000000000000000034 /* SpeechService.swift */,
@@ -355,6 +369,8 @@
 				AA0000000000000000000054 /* VoiceService.swift in Sources */,
 				AA0000000000000000000055 /* AppBranding.swift in Sources */,
 				AA0000000000000000000056 /* GlassButton.swift in Sources */,
+				AA0000000000000000000067 /* BillingService.swift in Sources */,
+				AA0000000000000000000068 /* PaywallView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

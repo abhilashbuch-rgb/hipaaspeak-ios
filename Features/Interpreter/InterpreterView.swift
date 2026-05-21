@@ -5,6 +5,7 @@ import Translation
 /// All content here is in-memory only. Wiped on background, idle, or ceiling.
 struct InterpreterView: View {
     @Environment(SessionManager.self) private var sessionManager
+    @Environment(BillingService.self) private var billing
 
     @State private var speechService = SpeechService()
     @State private var translationService = TranslationService()
@@ -13,6 +14,7 @@ struct InterpreterView: View {
     @State private var sourceLanguage: SupportedLanguage = .english
     @State private var targetLanguage: SupportedLanguage = .spanish
     @State private var showLanguagePicker = false
+    @State private var showPaywall = false
     @State private var activeSpeaker: TranscriptLine.Speaker?
     @State private var errorMessage: String?
 
@@ -79,10 +81,20 @@ struct InterpreterView: View {
                 // Clean up mic and voice so the UI resets cleanly.
                 if !isActive { stopEverything() }
             }
+            .onChange(of: billing.hasAccess) { _, hasAccess in
+                // Day session expired mid-session — stop immediately and show paywall.
+                if !hasAccess && sessionManager.isSessionActive {
+                    stopEverything()
+                    sessionManager.endSession()
+                }
+            }
             .onAppear {
                 if autoStartEnabled && !sessionManager.isSessionActive {
                     startAutoSession()
                 }
+            }
+            .sheet(isPresented: $showPaywall) {
+                PaywallView()
             }
         }
     }
@@ -182,6 +194,21 @@ struct InterpreterView: View {
 
     private var micControls: some View {
         VStack(spacing: 12) {
+            // Day-session time bank — only visible when the user is on a timed session.
+            // Subscribers see nothing here; they have unlimited time.
+            if billing.hasDaySession {
+                Label(billing.timeRemainingFormatted, systemImage: "clock")
+                    .font(.caption.monospacedDigit())
+                    .foregroundStyle(
+                        billing.daySessionSecondsRemaining < 300 ? .red : .secondary
+                    )
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 4)
+                    .background(.ultraThinMaterial)
+                    .clipShape(Capsule())
+                    .accessibilityLabel("Time remaining in session: \(billing.timeRemainingFormatted)")
+            }
+
             // Speaker labels
             HStack(spacing: 48) {
                 Text(sourceLanguage.displayName)
@@ -287,6 +314,12 @@ struct InterpreterView: View {
             }
 
         } else {
+            // ── Billing gate: require active access before starting any session ──
+            guard billing.hasAccess else {
+                showPaywall = true
+                return
+            }
+
             // ── Start: stop the other speaker if needed, then begin recording ──
             if speechService.isListening {
                 _ = speechService.stopListening()
@@ -296,6 +329,8 @@ struct InterpreterView: View {
             if !sessionManager.isSessionActive {
                 sessionManager.startSession(source: sourceLanguage, target: targetLanguage)
                 translationService.configure(source: sourceLanguage, target: targetLanguage)
+                // Start the day-session countdown (no-op for subscribers).
+                billing.beginSessionTracking()
             }
 
             activeSpeaker = speaker
@@ -311,9 +346,17 @@ struct InterpreterView: View {
     }
 
     private func startAutoSession() {
-        // Auto-start defaults to clinician speaking first
+        // Guard billing access even for auto-start — don't bypass the paywall.
+        guard billing.hasAccess else {
+            showPaywall = true
+            return
+        }
+
         sessionManager.startSession(source: sourceLanguage, target: targetLanguage)
         translationService.configure(source: sourceLanguage, target: targetLanguage)
+        // Start day-session countdown (no-op for subscribers).
+        billing.beginSessionTracking()
+
         activeSpeaker = .clinician
         do {
             try speechService.startListening(locale: sourceLanguage.locale)
@@ -330,6 +373,8 @@ struct InterpreterView: View {
         }
         voiceService.stop()
         translationService.reset()
+        // Stop the day-session timer and save remaining seconds to Keychain.
+        billing.endSessionTracking()
         activeSpeaker = nil
     }
 }

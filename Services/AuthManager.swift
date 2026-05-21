@@ -126,16 +126,20 @@ final class AuthManager {
 
 // MARK: - Minimal Keychain helper (no PHI — only opaque identifiers and status flags)
 
+/// Shared Keychain helper — used by AuthManager (credentials) and BillingService (day-session bank).
+/// Only stores billing state and auth state, never PHI. ARCHITECTURE.md §1.
 enum KeychainHelper {
+
+    private static let service = "com.hipaaspeak.app"
+
     static func save(key: String, value: String) {
         let data = Data(value.utf8)
         let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
+            kSecClass as String:       kSecClassGenericPassword,
             kSecAttrAccount as String: key,
-            kSecAttrService as String: "com.hipaaspeak",
+            kSecAttrService as String: service,
         ]
         SecItemDelete(query as CFDictionary)
-
         var addQuery = query
         addQuery[kSecValueData as String] = data
         SecItemAdd(addQuery as CFDictionary, nil)
@@ -143,11 +147,11 @@ enum KeychainHelper {
 
     static func load(key: String) -> String? {
         let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
+            kSecClass as String:       kSecClassGenericPassword,
             kSecAttrAccount as String: key,
-            kSecAttrService as String: "com.hipaaspeak",
-            kSecReturnData as String: true,
-            kSecMatchLimit as String: kSecMatchLimitOne,
+            kSecAttrService as String: service,
+            kSecReturnData as String:  true,
+            kSecMatchLimit as String:  kSecMatchLimitOne,
         ]
         var result: AnyObject?
         let status = SecItemCopyMatching(query as CFDictionary, &result)
@@ -157,9 +161,9 @@ enum KeychainHelper {
 
     static func delete(key: String) {
         let query: [String: Any] = [
-            kSecClass as String: kSecClassGenericPassword,
+            kSecClass as String:       kSecClassGenericPassword,
             kSecAttrAccount as String: key,
-            kSecAttrService as String: "com.hipaaspeak",
+            kSecAttrService as String: service,
         ]
         SecItemDelete(query as CFDictionary)
     }
