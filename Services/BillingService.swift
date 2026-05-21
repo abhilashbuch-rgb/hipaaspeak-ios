@@ -1,5 +1,6 @@
 import Foundation
 import StoreKit
+import UIKit
 import os
 import Observation
 
@@ -104,6 +105,7 @@ final class BillingService {
                 let transaction = try checkVerified(verification)
                 await handleTransaction(transaction)
                 await transaction.finish()
+                syncAppIcon()
             case .pending:
                 logger.info("Purchase pending external action.")
             case .userCancelled:
@@ -134,6 +136,27 @@ final class BillingService {
         }
 
         logger.info("Entitlements checked. Subscribed=\(self.isSubscribed)")
+        syncAppIcon()
+    }
+
+    // MARK: - App icon
+
+    /// Switches the app icon to gold when the user has active access, purple when they don't.
+    /// Only triggers the system "icon changed" dialog when the state actually changes —
+    /// calling with the already-active icon name is a no-op.
+    func syncAppIcon() {
+        let wantsGold = hasAccess
+        let currentIsGold = UIApplication.shared.alternateIconName == "AppIconGold"
+        guard wantsGold != currentIsGold else { return }
+
+        let iconName: String? = wantsGold ? "AppIconGold" : nil
+        UIApplication.shared.setAlternateIconName(iconName) { [weak self] error in
+            if let error {
+                self?.logger.error("Icon switch failed: \(error.localizedDescription)")
+            } else {
+                self?.logger.info("App icon switched to \(wantsGold ? "gold" : "purple").")
+            }
+        }
     }
 
     // MARK: - Restore
