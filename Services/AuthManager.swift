@@ -63,6 +63,7 @@ final class AuthManager {
         credential = nil
         KeychainHelper.delete(key: "apple_user_id")
         KeychainHelper.delete(key: "credential_status")
+        KeychainHelper.delete(key: "npi_last_four")
         state = .unauthenticated
         logger.info("User signed out.")
     }
@@ -98,6 +99,9 @@ final class AuthManager {
         self.credential = credential
         KeychainHelper.save(key: "credential_status", value: "verified")
         KeychainHelper.save(key: "credential_type", value: credential.type.rawValue)
+        if let last4 = credential.npiLastFour {
+            KeychainHelper.save(key: "npi_last_four", value: last4)
+        }
         state = .authenticated
         logger.info("Credential verified. Type=\(credential.type.rawValue)")
     }
@@ -117,6 +121,10 @@ final class AuthManager {
         self.userID = userID
 
         if hasVerifiedCredential() {
+            let typeRaw = KeychainHelper.load(key: "credential_type") ?? ""
+            let type    = Credential.CredentialType(rawValue: typeRaw) ?? .npi
+            let last4   = KeychainHelper.load(key: "npi_last_four")
+            credential  = Credential(type: type, verifiedAt: nil, status: .verified, npiLastFour: last4)
             state = .authenticated
         } else {
             state = .needsCredential

@@ -20,19 +20,38 @@ struct GlassButton: View {
         self.action = action
     }
 
+    @State private var pulse = false
+
     var body: some View {
         Button(action: action) {
             ZStack {
+                // Dual ripple rings — only rendered while recording
+                if isActive {
+                    Circle()
+                        .stroke(Color.red.opacity(0.25), lineWidth: 1.5)
+                        .scaleEffect(pulse ? 1.75 : 1.0)
+                        .opacity(pulse ? 0 : 0.6)
+                        .animation(
+                            .easeOut(duration: 1.3).repeatForever(autoreverses: false),
+                            value: pulse
+                        )
+
+                    Circle()
+                        .stroke(Color.red.opacity(0.15), lineWidth: 1)
+                        .scaleEffect(pulse ? 2.1 : 1.0)
+                        .opacity(pulse ? 0 : 0.4)
+                        .animation(
+                            .easeOut(duration: 1.3).delay(0.3).repeatForever(autoreverses: false),
+                            value: pulse
+                        )
+                }
+
                 // Glass base
                 Circle()
                     .fill(.ultraThinMaterial)
                     .overlay(
                         Circle()
-                            .fill(
-                                isActive
-                                    ? Color.white.opacity(0.15)
-                                    : Color.white.opacity(0.08)
-                            )
+                            .fill(isActive ? Color.white.opacity(0.15) : Color.white.opacity(0.08))
                     )
                     .overlay(
                         Circle()
@@ -48,11 +67,7 @@ struct GlassButton: View {
                                 lineWidth: 1
                             )
                     )
-                    .shadow(
-                        color: .black.opacity(0.12),
-                        radius: isActive ? 16 : 8,
-                        y: isActive ? 6 : 3
-                    )
+                    .shadow(color: .black.opacity(0.12), radius: isActive ? 16 : 8, y: isActive ? 6 : 3)
 
                 // Inner icon
                 icon.view(isActive: isActive)
@@ -62,6 +77,13 @@ struct GlassButton: View {
             .animation(.spring(response: 0.3, dampingFraction: 0.7), value: isActive)
         }
         .buttonStyle(.plain)
+        .onChange(of: isActive) { _, active in
+            pulse = false
+            if active {
+                // Let the scale spring settle before starting the ripple
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) { pulse = true }
+            }
+        }
     }
 }
 
@@ -92,19 +114,6 @@ enum GlassButtonIcon {
                         )
                 )
                 .shadow(color: .red.opacity(isActive ? 0.6 : 0.3), radius: isActive ? 8 : 4)
-                // Pulse animation when recording
-                .overlay(
-                    Circle()
-                        .stroke(Color.red.opacity(isActive ? 0.4 : 0), lineWidth: 2)
-                        .scaleEffect(isActive ? 1.6 : 1.0)
-                        .opacity(isActive ? 0 : 1)
-                        .animation(
-                            isActive
-                                ? .easeOut(duration: 1.2).repeatForever(autoreverses: false)
-                                : .default,
-                            value: isActive
-                        )
-                )
 
         case .play:
             Image(systemName: "play.fill")

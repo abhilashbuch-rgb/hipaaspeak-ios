@@ -55,13 +55,20 @@ struct SettingsView: View {
                                          : AppLogo.brandPurple)
                 }
 
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 4) {
                     if let credType = authManager.credential?.type {
                         Text(credType.rawValue)
                             .font(.headline)
                     } else {
                         Text("Clinician")
                             .font(.headline)
+                    }
+
+                    // NPI last four — shown only for NPI-verified users
+                    if let last4 = authManager.credential?.npiLastFour {
+                        Text("NPI ••••\(last4)")
+                            .font(.caption.monospacedDigit())
+                            .foregroundStyle(.secondary)
                     }
 
                     HStack(spacing: 4) {

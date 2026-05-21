@@ -1,5 +1,6 @@
 import SwiftUI
 import Translation
+import UIKit
 
 /// The main translation screen — the core of the app.
 /// All content here is in-memory only. Wiped on background, idle, or ceiling.
@@ -145,6 +146,11 @@ struct InterpreterView: View {
                     ForEach(sessionManager.session.transcriptLines) { line in
                         TranscriptBubble(line: line)
                             .id(line.id)
+                            .transition(.asymmetric(
+                                insertion: .move(edge: line.speaker == .clinician ? .leading : .trailing)
+                                    .combined(with: .opacity),
+                                removal: .opacity
+                            ))
                     }
 
                     // Live transcript (not yet committed)
@@ -303,7 +309,9 @@ struct InterpreterView: View {
                         originalText: transcript,
                         translatedText: translated
                     )
-                    sessionManager.appendTranscriptLine(line)
+                    withAnimation(.spring(response: 0.4, dampingFraction: 0.8)) {
+                        sessionManager.appendTranscriptLine(line)
+                    }
 
                     // Speak the translation aloud on the target language.
                     voiceService.speak(translated, language: targetLang)
@@ -337,8 +345,10 @@ struct InterpreterView: View {
             do {
                 try speechService.startListening(locale: language.locale)
                 sessionManager.recordActivity()
+                UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                 errorMessage = nil
             } catch {
+                UINotificationFeedbackGenerator().notificationOccurred(.error)
                 errorMessage = error.localizedDescription
                 activeSpeaker = nil
             }

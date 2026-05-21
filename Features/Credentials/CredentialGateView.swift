@@ -1,5 +1,6 @@
 import SwiftUI
 import AuthenticationServices
+import UIKit
 
 /// Shown after sign-in when the user hasn't verified their clinical credential yet.
 /// Required by ARCHITECTURE.md §6 — no translation without verified credentials.
@@ -7,58 +8,34 @@ struct CredentialGateView: View {
     @Environment(AuthManager.self) private var authManager
 
     // Step machine — drives the whole view
-    private enum Step {
+    private enum Step: Equatable {
         case roleSelection
         case npiEntry
         case npiConfirm(CredentialService.NPPESResult)
         case manualInstructions(Credential.CredentialType)
+        case verified(CredentialService.NPPESResult)
+
+        static func == (lhs: Step, rhs: Step) -> Bool {
+            switch (lhs, rhs) {
+            case (.roleSelection, .roleSelection),
+                 (.npiEntry, .npiEntry): return true
+            default: return false
+            }
+        }
     }
 
-    @State private var step: Step = .roleSelection
+    @State private var step: Step      = .roleSelection
+    @State private var slideForward    = true   // controls slide direction
 
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // Persistent header
                 header
-
                 Divider()
 
-                // Step content
                 ScrollView {
                     VStack(spacing: 24) {
-                        switch step {
-                        case .roleSelection:
-                            RoleSelectionStep { role in
-                                if role == .npi {
-                                    step = .npiEntry
-                                } else {
-                                    step = .manualInstructions(role)
-                                }
-                            }
-                        case .npiEntry:
-                            NPIEntryStep { result in
-                                step = .npiConfirm(result)
-                            } onBack: {
-                                step = .roleSelection
-                            }
-                        case .npiConfirm(let result):
-                            NPIConfirmStep(result: result) {
-                                // Confirmed — mark verified
-                                let credential = Credential(
-                                    type: .npi,
-                                    verifiedAt: Date(),
-                                    status: .verified
-                                )
-                                authManager.markCredentialVerified(credential)
-                            } onBack: {
-                                step = .npiEntry
-                            }
-                        case .manualInstructions(let role):
-                            ManualInstructionsStep(role: role) {
-                                step = .roleSelection
-                            }
-                        }
+                        currentStepView
                     }
                     .padding(.horizontal)
                     .padding(.top, 24)
@@ -74,6 +51,68 @@ struct CredentialGateView: View {
                 }
             }
         }
+    }
+
+    @ViewBuilder
+    private var currentStepView: some View {
+        switch step {
+        case .roleSelection:
+            RoleSelectionStep { role in
+                advance(to: role == .npi ? .npiEntry : .manualInstructions(role))
+            }
+            .transition(transition)
+
+        case .npiEntry:
+            NPIEntryStep { result in
+                advance(to: .npiConfirm(result))
+            } onBack: {
+                retreat(to: .roleSelection)
+            }
+            .transition(transition)
+
+        case .npiConfirm(let result):
+            NPIConfirmStep(result: result) {
+                advance(to: .verified(result))
+            } onBack: {
+                retreat(to: .npiEntry)
+            }
+            .transition(transition)
+
+        case .manualInstructions(let role):
+            ManualInstructionsStep(role: role) {
+                retreat(to: .roleSelection)
+            }
+            .transition(transition)
+
+        case .verified(let result):
+            VerifiedSplashStep(result: result) {
+                let credential = Credential(
+                    type: .npi,
+                    verifiedAt: Date(),
+                    status: .verified,
+                    npiLastFour: String(result.npi.suffix(4))
+                )
+                UINotificationFeedbackGenerator().notificationOccurred(.success)
+                authManager.markCredentialVerified(credential)
+            }
+            .transition(transition)
+        }
+    }
+
+    private var transition: AnyTransition {
+        slideForward
+            ? .asymmetric(insertion: .move(edge: .trailing), removal: .move(edge: .leading))
+            : .asymmetric(insertion: .move(edge: .leading),  removal: .move(edge: .trailing))
+    }
+
+    private func advance(to next: Step) {
+        slideForward = true
+        withAnimation(.easeInOut(duration: 0.28)) { step = next }
+    }
+
+    private func retreat(to prev: Step) {
+        slideForward = false
+        withAnimation(.easeInOut(duration: 0.28)) { step = prev }
     }
 
     private var header: some View {
@@ -243,10 +282,13 @@ private struct NPIEntryStep: View {
     private func verify() async {
         isVerifying = true
         errorMessage = nil
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
         do {
             let result = try await credentialService.verifyNPI(npiInput)
+            UIImpactFeedbackGenerator(style: .medium).impactOccurred()
             onResult(result)
         } catch {
+            UINotificationFeedbackGenerator().notificationOccurred(.error)
             errorMessage = error.localizedDescription
         }
         isVerifying = false
@@ -433,6 +475,85 @@ private struct ManualInstructionsStep: View {
                 .font(.caption2)
                 .foregroundStyle(.tertiary)
                 .multilineTextAlignment(.center)
+        }
+    }
+}
+
+// MARK: - Step 4: Verified celebration
+
+private struct VerifiedSplashStep: View {
+    let result:    CredentialService.NPPESResult
+    let onContinue: () -> Void
+
+    @State private var checkScale:   CGFloat = 0.3
+    @State private var checkOpacity: CGFloat = 0
+    @State private var textOpacity:  CGFloat = 0
+    @State private var buttonOpacity: CGFloat = 0
+
+    var body: some View {
+        VStack(spacing: 32) {
+            Spacer().frame(height: 16)
+
+            // Animated checkmark
+            ZStack {
+                Circle()
+                    .fill(Color.green.opacity(0.12))
+                    .frame(width: 110, height: 110)
+
+                Image(systemName: "checkmark.seal.fill")
+                    .font(.system(size: 64))
+                    .foregroundStyle(.green)
+                    .scaleEffect(checkScale)
+                    .opacity(checkOpacity)
+            }
+
+            VStack(spacing: 8) {
+                Text("You're verified")
+                    .font(.title2.bold())
+
+                Text("\(result.firstName) \(result.lastName)")
+                    .font(.headline)
+                    .foregroundStyle(.secondary)
+
+                HStack(spacing: 6) {
+                    if !result.credential.isEmpty {
+                        Text(result.credential)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    Text("NPI ••••\(String(result.npi.suffix(4)))")
+                        .font(.subheadline.monospacedDigit())
+                        .foregroundStyle(.secondary)
+                }
+            }
+            .opacity(textOpacity)
+
+            Button {
+                onContinue()
+            } label: {
+                Text("Enter HIPAAspeak")
+                    .fontWeight(.semibold)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 50)
+                    .background(AppLogo.brandPurple)
+                    .foregroundStyle(.white)
+                    .clipShape(RoundedRectangle(cornerRadius: 14))
+            }
+            .opacity(buttonOpacity)
+
+            Spacer()
+        }
+        .onAppear {
+            withAnimation(.spring(response: 0.5, dampingFraction: 0.6).delay(0.1)) {
+                checkScale   = 1.0
+                checkOpacity = 1.0
+            }
+            withAnimation(.easeOut(duration: 0.4).delay(0.45)) {
+                textOpacity = 1.0
+            }
+            withAnimation(.easeOut(duration: 0.4).delay(0.7)) {
+                buttonOpacity = 1.0
+            }
         }
     }
 }
