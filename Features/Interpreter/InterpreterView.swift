@@ -19,8 +19,13 @@ struct InterpreterView: View {
     @State private var activeSpeaker: TranscriptLine.Speaker?
     @State private var errorMessage: String?
 
+    // Watermark breathing animation
+    @State private var watermarkBreathing = false
+
     /// Auto-start: when enabled, begins listening as soon as the view appears
     @AppStorage("autoStartRecording") private var autoStartEnabled = false
+
+    private var isRecording: Bool { activeSpeaker != nil && speechService.isListening }
 
     var body: some View {
         NavigationStack {
@@ -35,6 +40,26 @@ struct InterpreterView: View {
                     endPoint: .bottom
                 )
                 .ignoresSafeArea()
+
+                // Brand watermark — large asterisk, always present, breathes while recording
+                AppLogo(size: 360)
+                    .opacity(isRecording ? 0.055 : 0.035)
+                    .scaleEffect(watermarkBreathing ? 1.04 : 1.0)
+                    .blur(radius: 1)
+                    .offset(y: -20)
+                    .allowsHitTesting(false)
+                    .animation(.easeInOut(duration: 0.6), value: isRecording)
+                    .onChange(of: isRecording) { _, recording in
+                        if recording {
+                            withAnimation(.easeInOut(duration: 2.2).repeatForever(autoreverses: true)) {
+                                watermarkBreathing = true
+                            }
+                        } else {
+                            withAnimation(.easeInOut(duration: 0.6)) {
+                                watermarkBreathing = false
+                            }
+                        }
+                    }
 
                 VStack(spacing: 0) {
                     // Language selector bar
@@ -60,7 +85,9 @@ struct InterpreterView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    AppLogo(size: 22)
+                    AppLogo(size: 28)
+                        .opacity(isRecording ? 1.0 : 0.75)
+                        .animation(.easeInOut(duration: 0.4), value: isRecording)
                 }
                 if sessionManager.isSessionActive {
                     ToolbarItem(placement: .topBarTrailing) {
@@ -177,23 +204,7 @@ struct InterpreterView: View {
     // MARK: - Idle state
 
     private var idleView: some View {
-        VStack(spacing: 16) {
-            Spacer()
-            AppLogo(size: 48)
-                .opacity(0.3)
-            Text("Tap the record button to begin")
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-
-            if let error = errorMessage {
-                Text(error)
-                    .font(.caption)
-                    .foregroundStyle(.red)
-                    .multilineTextAlignment(.center)
-                    .padding(.horizontal)
-            }
-            Spacer()
-        }
+        IdleLogoView(errorMessage: errorMessage)
     }
 
     // MARK: - Mic controls (liquid glass)
@@ -239,17 +250,11 @@ struct InterpreterView: View {
                 }
                 .accessibilityLabel("Record \(sourceLanguage.displayName). \(activeSpeaker == .clinician ? "Recording" : "Tap to start")")
 
-                // Playback / speaker toggle
-                GlassButton(
-                    icon: voiceService.isSpeaking ? .speakerOff : .speaker,
-                    size: 52,
-                    isActive: voiceService.isSpeaking
-                ) {
-                    if voiceService.isSpeaking {
-                        voiceService.stop()
-                    }
+                // Center brand mark — doubles as speaker mute when audio is playing
+                BrandCenterButton(isSpeaking: voiceService.isSpeaking) {
+                    if voiceService.isSpeaking { voiceService.stop() }
                 }
-                .accessibilityLabel(voiceService.isSpeaking ? "Stop playback" : "Speaker")
+                .accessibilityLabel(voiceService.isSpeaking ? "Stop playback" : "HIPAAspeak")
 
                 // Patient record button — red dot
                 GlassButton(
@@ -386,6 +391,122 @@ struct InterpreterView: View {
         // Stop the day-session timer and save remaining seconds to Keychain.
         billing.endSessionTracking()
         activeSpeaker = nil
+    }
+}
+
+// MARK: - Idle logo view
+
+private struct IdleLogoView: View {
+    let errorMessage: String?
+    @State private var pulse = false
+
+    var body: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            ZStack {
+                // Outer pulse ring
+                AppLogo(size: 120)
+                    .opacity(pulse ? 0 : 0.07)
+                    .scaleEffect(pulse ? 1.6 : 1.0)
+                    .animation(.easeOut(duration: 2.0).repeatForever(autoreverses: false), value: pulse)
+
+                // Inner pulse ring
+                AppLogo(size: 120)
+                    .opacity(pulse ? 0 : 0.12)
+                    .scaleEffect(pulse ? 1.25 : 1.0)
+                    .animation(.easeOut(duration: 2.0).delay(0.4).repeatForever(autoreverses: false), value: pulse)
+
+                // Core logo
+                AppLogo(size: 72)
+                    .opacity(0.75)
+            }
+            .onAppear { pulse = true }
+
+            VStack(spacing: 6) {
+                Text("Ready to interpret")
+                    .font(.headline)
+                    .foregroundStyle(.primary.opacity(0.7))
+
+                Text("Tap a microphone to begin")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            if let error = errorMessage {
+                Text(error)
+                    .font(.caption)
+                    .foregroundStyle(.red)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 32)
+            }
+
+            Spacer()
+        }
+    }
+}
+
+// MARK: - Brand center button
+
+/// The purple asterisk lives between the two mic buttons.
+/// Tapping it stops audio playback when speaking; otherwise it's purely decorative.
+private struct BrandCenterButton: View {
+    let isSpeaking: Bool
+    let action: () -> Void
+
+    @State private var speakerPulse = false
+
+    var body: some View {
+        Button(action: action) {
+            ZStack {
+                // Outer glow when speaking
+                if isSpeaking {
+                    AppLogo(size: 72)
+                        .opacity(speakerPulse ? 0 : 0.15)
+                        .scaleEffect(speakerPulse ? 1.5 : 1.0)
+                        .animation(.easeOut(duration: 1.0).repeatForever(autoreverses: false), value: speakerPulse)
+                }
+
+                // Glass base
+                Circle()
+                    .fill(.ultraThinMaterial)
+                    .overlay(
+                        Circle().fill(
+                            isSpeaking
+                                ? AppLogo.brandPurple.opacity(0.12)
+                                : AppLogo.brandPurple.opacity(0.06)
+                        )
+                    )
+                    .overlay(
+                        Circle().stroke(
+                            AppLogo.brandPurple.opacity(isSpeaking ? 0.35 : 0.15),
+                            lineWidth: 1
+                        )
+                    )
+                    .frame(width: 56, height: 56)
+
+                // The asterisk
+                AppLogo(size: isSpeaking ? 28 : 32)
+                    .opacity(isSpeaking ? 0.5 : 0.85)
+
+                // Mute hint when speaking
+                if isSpeaking {
+                    Image(systemName: "speaker.slash.fill")
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(AppLogo.brandPurple.opacity(0.6))
+                        .offset(x: 12, y: -12)
+                }
+            }
+            .frame(width: 56, height: 56)
+        }
+        .buttonStyle(.plain)
+        .onChange(of: isSpeaking) { _, speaking in
+            speakerPulse = false
+            if speaking {
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { speakerPulse = true }
+            }
+        }
+        .accessibilityLabel(isSpeaking ? "Stop audio" : "HIPAAspeak")
     }
 }
 
